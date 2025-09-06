@@ -16,7 +16,7 @@
     <div class="container">
         <div class="row mb-4">
             <div class="col-md-6">
-                <h2>Jobs for {{ selected_date|date:"F d, Y" }}</h2>
+                <h2>Jobs for {{ selected_date|date:"d-m-Y" }}</h2>
             </div>
             <div class="col-md-6">
                 <form method="GET" action="{% url 'dashboard' %}" class="d-flex justify-content-end">
@@ -46,8 +46,19 @@
                     <td>{{ job.end_time|date:"H:i" }}</td>
                     <td>
                         {{ job.customer.name }}
-                        {% if job.recurrence != 'none' %}
-                            <span title="Recurring Job">&#x21bb;</span>
+                        {% if job.recurrence_type != 'none' %}
+                            <span class="badge bg-secondary" title="Recurring Job">
+                                &#x21bb;
+                                {% if job.recurrence_type == 'weekly' %}
+                                    {% if job.recurrence_frequency == 1 %}
+                                        Weekly
+                                    {% else %}
+                                        Every {{ job.recurrence_frequency }} weeks
+                                    {% endif %}
+                                {% elif job.recurrence_type == 'monthly' %}
+                                    Monthly
+                                {% endif %}
+                            </span>
                         {% endif %}
                     </td>
                     <td>{{ job.description }}</td>

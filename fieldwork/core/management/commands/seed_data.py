@@ -53,8 +53,17 @@ class Command(BaseCommand):
         for _ in range(15):
             customer = random.choice(customers)
             start_hour = random.randint(8, 16)
-            start_time = datetime(today.year, today.month, today.day, start_hour, 0, 0)
-            end_time = start_time + timedelta(hours=random.randint(1, 4))
+            start_minute = random.choice([0, 15, 30, 45])
+            start_time = datetime(today.year, today.month, today.day, start_hour, start_minute, 0)
+
+            # Duration in 15-minute increments, from 1 to 4 hours
+            duration_in_minutes = random.randint(4, 16) * 15
+            end_time = start_time + timedelta(minutes=duration_in_minutes)
+
+            recurrence_type = random.choice(['none', 'weekly', 'monthly'])
+            recurrence_frequency = 1
+            if recurrence_type == 'weekly':
+                recurrence_frequency = random.randint(1, 4)
 
             job = Job.objects.create(
                 customer=customer,
@@ -63,7 +72,8 @@ class Command(BaseCommand):
                 start_time=start_time,
                 end_time=end_time,
                 status=random.choice(['scheduled', 'in_progress', 'completed']),
-                recurrence=random.choice(['none', 'weekly', 'bi-weekly', 'monthly'])
+                recurrence_type=recurrence_type,
+                recurrence_frequency=recurrence_frequency
             )
             job.staff.set(random.sample(staff_users, k=random.randint(1, 3)))
 
