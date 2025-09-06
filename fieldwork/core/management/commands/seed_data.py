@@ -31,6 +31,7 @@ class Command(BaseCommand):
                 first_name=first_name,
                 last_name=last_name,
                 email=email,
+                is_staff=True
             )
             user.set_password('password')
             user.last_login = timezone.now()
@@ -90,5 +91,34 @@ class Command(BaseCommand):
             )
             job.staff.set(random.sample(staff_users, k=random.randint(1, 3)))
 
+        # Create overlapping jobs for one staff member for testing
+        if staff_users and customers:
+            test_staff = staff_users[0]
+            test_customer = customers[0]
+            test_date = date.today() + timedelta(days=2)
+
+            # Job 1
+            job1 = Job.objects.create(
+                customer=test_customer,
+                description="Overlapping Job 1",
+                job_type='gardening',
+                date=test_date,
+                start_time=time(9, 0),
+                end_time=time(11, 0),
+                status='scheduled'
+            )
+            job1.staff.set([test_staff])
+
+            # Job 2 (overlaps with Job 1)
+            job2 = Job.objects.create(
+                customer=customers[1],
+                description="Overlapping Job 2",
+                job_type='maintenance',
+                date=test_date,
+                start_time=time(10, 0),
+                end_time=time(12, 0),
+                status='scheduled'
+            )
+            job2.staff.set([test_staff])
 
         self.stdout.write(self.style.SUCCESS('Successfully seeded data.'))

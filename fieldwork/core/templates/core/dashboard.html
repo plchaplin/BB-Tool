@@ -23,81 +23,107 @@
         <li class="nav-item">
             <a class="nav-link {% if view_type == 'week' %}active{% endif %}" href="?view_type=week&date={{ selected_date|date:'Y-m-d' }}">Week View</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if view_type == 'timeline' %}active{% endif %}" href="?view_type=timeline&date={{ selected_date|date:'Y-m-d' }}">Timeline View</a>
+        </li>
     </ul>
 
-    {% regroup jobs by date as jobs_by_day %}
+    {% if view_type == 'timeline' %}
+        <div id='calendar'></div>
+    {% else %}
+        {% regroup jobs by date as jobs_by_day %}
 
-    {% for day in jobs_by_day %}
-        {% if view_type == 'week' %}
-            <h4 class="mt-4 mb-3">{{ day.grouper|date:"l, d-m-Y" }}</h4>
-        {% endif %}
-        <table class="table table-striped table-hover">
-            {% if forloop.first or view_type == 'day' %}
-            <thead class="table-light">
-                <tr>
-                    <th scope="col" style="width: 5%;"><input type="checkbox" class="form-check-input"></th>
-                    <th scope="col" style="width: 10%;">Start</th>
-                    <th scope="col" style="width: 10%;">End</th>
-                    <th scope="col" style="width: 20%;">Client</th>
-                    <th scope="col" style="width: 15%;">Job Type</th>
-                    <th scope="col" style="width: 20%;">Services</th>
-                    <th scope="col" style="width: 15%;">Staff</th>
-                    <th scope="col" style="width: 10%;">Status</th>
-                </tr>
-            </thead>
+        {% for day in jobs_by_day %}
+            {% if view_type == 'week' %}
+                <h4 class="mt-4 mb-3">{{ day.grouper|date:"l, d-m-Y" }}</h4>
             {% endif %}
-            <tbody>
-                {% for job in day.list %}
-                <tr>
-                    <td><input type="checkbox" class="form-check-input"></td>
-                    <td>{{ job.start_time|date:"H:i" }}</td>
-                    <td>{{ job.end_time|date:"H:i" }}</td>
-                    <td>
-                        {{ job.customer.name }}
-                        {% if job.recurrence_type != 'none' %}
-                            <span class="badge bg-secondary" title="Recurring Job">
-                                &#x21bb;
-                                {% if job.recurrence_type == 'weekly' %}
-                                    {% if job.recurrence_frequency == 1 %}
-                                        Weekly
-                                    {% else %}
-                                        Every {{ job.recurrence_frequency }} weeks
+            <table class="table table-striped table-hover">
+                {% if forloop.first or view_type == 'day' %}
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 5%;"><input type="checkbox" class="form-check-input"></th>
+                        <th scope="col" style="width: 10%;">Start</th>
+                        <th scope="col" style="width: 10%;">End</th>
+                        <th scope="col" style="width: 20%;">Client</th>
+                        <th scope="col" style="width: 15%;">Job Type</th>
+                        <th scope="col" style="width: 20%;">Services</th>
+                        <th scope="col" style="width: 15%;">Staff</th>
+                        <th scope="col" style="width: 10%;">Status</th>
+                    </tr>
+                </thead>
+                {% endif %}
+                <tbody>
+                    {% for job in day.list %}
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input"></td>
+                        <td>{{ job.start_time|date:"H:i" }}</td>
+                        <td>{{ job.end_time|date:"H:i" }}</td>
+                        <td>
+                            {{ job.customer.name }}
+                            {% if job.recurrence_type != 'none' %}
+                                <span class="badge bg-secondary" title="Recurring Job">
+                                    &#x21bb;
+                                    {% if job.recurrence_type == 'weekly' %}
+                                        {% if job.recurrence_frequency == 1 %}
+                                            Weekly
+                                        {% else %}
+                                            Every {{ job.recurrence_frequency }} weeks
+                                        {% endif %}
+                                    {% elif job.recurrence_type == 'monthly' %}
+                                        Monthly
                                     {% endif %}
-                                {% elif job.recurrence_type == 'monthly' %}
-                                    Monthly
-                                {% endif %}
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>{{ job.get_job_type_display }}</td>
-                    <td>{{ job.description }}</td>
-                    <td>
-                        {% for staff_member in job.staff.all %}
-                            {{ staff_member.get_full_name|default:staff_member.username }}
-                            {% if not forloop.last %}, {% endif %}
-                        {% empty %}
-                            <span class="text-muted">Unassigned</span>
-                        {% endfor %}
-                    </td>
-                    <td>
-                        <form action="{% url 'update_job_status' job.id %}" method="POST" class="status-form">
-                            {% csrf_token %}
-                            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-                                {% for status_value, status_display in status_choices %}
-                                    <option value="{{ status_value }}" {% if job.status == status_value %}selected{% endif %}>
-                                        {{ status_display }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% empty %}
-        <div class="alert alert-info" role="alert">
-            No jobs scheduled for this period.
-        </div>
-    {% endfor %}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ job.get_job_type_display }}</td>
+                        <td>{{ job.description }}</td>
+                        <td>
+                            {% for staff_member in job.staff.all %}
+                                {{ staff_member.get_full_name|default:staff_member.username }}
+                                {% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <form action="{% url 'update_job_status' job.id %}" method="POST" class="status-form">
+                                {% csrf_token %}
+                                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    {% for status_value, status_display in status_choices %}
+                                        <option value="{{ status_value }}" {% if job.status == status_value %}selected{% endif %}>
+                                            {{ status_display }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% empty %}
+            <div class="alert alert-info" role="alert">
+                No jobs scheduled for this period.
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/resource-timeline@6.1.19/index.global.min.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.getElementById('calendar')) {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+                initialView: 'resourceTimelineWeek',
+                resources: {{ resources_json|safe }},
+                events: {{ events_json|safe }}
+            });
+            calendar.render();
+        }
+    });
+</script>
 {% endblock %}

@@ -1,5 +1,7 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
+from django.contrib.auth.models import User
 from .models import Job
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -13,13 +15,55 @@ def dashboard(request):
     except (ValueError, TypeError):
         selected_date = date.today()
 
+    jobs = Job.objects.all()
+    date_display = ""
+    resources_json = "[]"
+    events_json = "[]"
+
     if view_type == 'week':
         start_of_week = selected_date - timedelta(days=selected_date.weekday())
         end_of_week = start_of_week + timedelta(days=6)
-        jobs = Job.objects.filter(date__range=[start_of_week, end_of_week]).order_by('date', 'start_time')
+        jobs = jobs.filter(date__range=[start_of_week, end_of_week]).order_by('date', 'start_time')
         date_display = f"{start_of_week.strftime('%d-%m-%Y')} to {end_of_week.strftime('%d-%m-%Y')}"
-    else: # Day view
-        jobs = Job.objects.filter(date=selected_date).order_by('start_time')
+    elif view_type == 'timeline':
+        start_of_week = selected_date - timedelta(days=selected_date.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        jobs_for_period = jobs.filter(date__range=[start_of_week, end_of_week])
+        date_display = f"{start_of_week.strftime('%d-%m-%Y')} to {end_of_week.strftime('%d-%m-%Y')}"
+
+        staff_users = User.objects.filter(is_staff=True)
+        resources = [{'id': user.id, 'title': user.get_full_name() or user.username} for user in staff_users]
+
+        # Detect overlaps
+        overlapping_job_ids = set()
+        for staff in staff_users:
+            staff_jobs = jobs_for_period.filter(staff=staff).order_by('date', 'start_time')
+            for i in range(len(staff_jobs) - 1):
+                job1 = staff_jobs[i]
+                job2 = staff_jobs[i+1]
+                if job1.date == job2.date and job1.end_time > job2.start_time:
+                    overlapping_job_ids.add(job1.id)
+                    overlapping_job_ids.add(job2.id)
+
+        events = []
+        for job in jobs_for_period:
+            event_color = 'red' if job.id in overlapping_job_ids else None
+            for staff in job.staff.all():
+                event = {
+                    'resourceId': staff.id,
+                    'title': f"{job.customer.name} ({job.get_job_type_display()})",
+                    'start': datetime.combine(job.date, job.start_time).isoformat(),
+                    'end': datetime.combine(job.date, job.end_time).isoformat(),
+                }
+                if event_color:
+                    event['borderColor'] = event_color
+                    event['backgroundColor'] = event_color
+                events.append(event)
+
+        resources_json = json.dumps(resources)
+        events_json = json.dumps(events)
+    else:  # Day view
+        jobs = jobs.filter(date=selected_date).order_by('start_time')
         date_display = selected_date.strftime('%d-%m-%Y')
 
     context = {
@@ -28,6 +72,8 @@ def dashboard(request):
         'view_type': view_type,
         'date_display': date_display,
         'status_choices': Job.STATUS_CHOICES,
+        'resources_json': resources_json,
+        'events_json': events_json,
     }
     return render(request, 'core/dashboard.html', context)
 
