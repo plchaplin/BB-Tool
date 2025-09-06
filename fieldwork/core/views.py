@@ -16,7 +16,7 @@ def dashboard(request):
         selected_date = date.today()
 
     # Filter jobs where the start_time is on the selected date
-    jobs = Job.objects.filter(start_time__date=selected_date).order_by('start_time')
+    jobs = Job.objects.filter(date=selected_date).order_by('start_time')
 
     context = {
         'jobs': jobs,
@@ -39,7 +39,7 @@ def update_job_status(request, job_id):
     if job.status == 'completed' and original_recurrence_type != 'none':
         # Create the next job in the series
         new_job = job
-        new_job.pk = None
+        new_job.pk = None  # This will create a new instance
 
         delta = None
         if original_recurrence_type == 'weekly':
@@ -48,9 +48,11 @@ def update_job_status(request, job_id):
             delta = relativedelta(months=original_recurrence_frequency)
 
         if delta:
-            new_job.start_time = job.start_time + delta
-            new_job.end_time = job.end_time + delta
+            new_job.date = job.date + delta
             new_job.status = 'scheduled'
+            # The start_time and end_time remain the same
+            new_job.start_time = job.start_time
+            new_job.end_time = job.end_time
             # Keep the recurrence for the new job
             new_job.recurrence_type = original_recurrence_type
             new_job.recurrence_frequency = original_recurrence_frequency
@@ -62,5 +64,5 @@ def update_job_status(request, job_id):
             job.save()
 
     # Preserve the date filter
-    selected_date = job.start_time.strftime('%Y-%m-%d')
+    selected_date = job.date.strftime('%Y-%m-%d')
     return redirect(f"/?date={selected_date}")

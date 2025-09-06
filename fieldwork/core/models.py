@@ -22,8 +22,9 @@ class Job(models.Model):
     staff = models.ManyToManyField(User, related_name='jobs')
     description = models.TextField()
     address = models.TextField()
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
 
     RECURRENCE_TYPE_CHOICES = [
@@ -42,4 +43,4 @@ class Job(models.Model):
     )
 
     def __str__(self):
-        return f"Job for {self.customer} on {self.start_time.strftime('%Y-%m-%d')}"
+        return f"Job for {self.customer} on {self.date.strftime('%Y-%m-%d')}"

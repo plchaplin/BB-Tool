@@ -1,5 +1,5 @@
 import random
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, time
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -54,11 +54,23 @@ class Command(BaseCommand):
             customer = random.choice(customers)
             start_hour = random.randint(8, 16)
             start_minute = random.choice([0, 15, 30, 45])
-            start_time = datetime(today.year, today.month, today.day, start_hour, start_minute, 0)
+            start_time_obj = time(start_hour, start_minute)
 
             # Duration in 15-minute increments, from 1 to 4 hours
             duration_in_minutes = random.randint(4, 16) * 15
-            end_time = start_time + timedelta(minutes=duration_in_minutes)
+            # We need a datetime object to do timedelta calculations
+            start_datetime = datetime.combine(today, start_time_obj)
+            end_datetime = start_datetime + timedelta(minutes=duration_in_minutes)
+            end_time_obj = end_datetime.time()
+
+            # Handle jobs that cross midnight by moving them to the next day
+            job_date = today
+            if end_datetime.date() > today:
+                # This is a simple approach; for now, we just don't create jobs that span midnight
+                # to strictly adhere to the "same day" rule.
+                # A more complex approach could be to adjust the end time to 23:59.
+                # Let's just skip these for the seeder.
+                continue
 
             recurrence_type = random.choice(['none', 'weekly', 'monthly'])
             recurrence_frequency = 1
@@ -69,8 +81,9 @@ class Command(BaseCommand):
                 customer=customer,
                 description=fake.text(max_nb_chars=100),
                 address=customer.address,
-                start_time=start_time,
-                end_time=end_time,
+                date=job_date,
+                start_time=start_time_obj,
+                end_time=end_time_obj,
                 status=random.choice(['scheduled', 'in_progress', 'completed']),
                 recurrence_type=recurrence_type,
                 recurrence_frequency=recurrence_frequency
