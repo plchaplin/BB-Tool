@@ -110,20 +110,28 @@
 {% endblock %}
 
 {% block scripts %}
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/resource-timeline@6.1.19/index.global.min.js'></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (document.getElementById('calendar')) {
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
-                initialView: 'resourceTimelineWeek',
-                resources: {{ resources_json|safe }},
-                events: {{ events_json|safe }}
+    {% if view_type == 'timeline' %}
+        {{ resources_json|json_script:"resources-data" }}
+        {{ events_json|json_script:"events-data" }}
+        <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
+        <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/resource-timeline@6.1.19/index.global.min.js'></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                if (document.getElementById('calendar')) {
+                    var calendarEl = document.getElementById('calendar');
+
+                    const resourcesData = JSON.parse(document.getElementById('resources-data').textContent);
+                    const eventsData = JSON.parse(document.getElementById('events-data').textContent);
+
+                    var calendar = new FullCalendar.Calendar(calendarEl, {
+                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+                        initialView: 'resourceTimelineWeek',
+                        resources: resourcesData,
+                        events: eventsData
+                    });
+                    calendar.render();
+                }
             });
-            calendar.render();
-        }
-    });
-</script>
+        </script>
+    {% endif %}
 {% endblock %}
