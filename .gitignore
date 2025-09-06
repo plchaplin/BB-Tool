@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+
+# Database
+db.sqlite3
+
+# Test file
+fieldwork/core/migrations/test.txt
