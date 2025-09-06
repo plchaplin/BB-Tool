@@ -47,6 +47,10 @@ def dashboard(request):
 
         events = []
         for job in jobs_for_period:
+            # Skip jobs with incomplete data to prevent crashes
+            if not all([job.date, job.start_time, job.end_time]):
+                continue
+
             event_color = 'red' if job.id in overlapping_job_ids else None
             for staff in job.staff.all():
                 event = {
