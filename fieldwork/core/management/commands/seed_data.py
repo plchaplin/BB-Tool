@@ -42,37 +42,37 @@ class Command(BaseCommand):
         for _ in range(20):
             customer = Customer.objects.create(
                 name=fake.company(),
-                address=fake.address(),
+                street=fake.street_address(),
+                town=fake.city(),
+                postcode=fake.postcode(),
                 phone_number=fake.phone_number(),
                 email=fake.email()
             )
             customers.append(customer)
 
-        # Create jobs for today
+        # Create jobs for the next 14 days
         today = date.today()
-        for _ in range(15):
-            customer = random.choice(customers)
-            start_hour = random.randint(8, 16)
-            start_minute = random.choice([0, 15, 30, 45])
-            start_time_obj = time(start_hour, start_minute)
+        for day_offset in range(14):
+            job_date = today + timedelta(days=day_offset)
+            # Create a random number of jobs for each day
+            for _ in range(random.randint(2, 5)):
+                customer = random.choice(customers)
+                start_hour = random.randint(8, 16)
+                start_minute = random.choice([0, 15, 30, 45])
+                start_time_obj = time(start_hour, start_minute)
 
-            # Duration in 15-minute increments, from 1 to 4 hours
-            duration_in_minutes = random.randint(4, 16) * 15
-            # We need a datetime object to do timedelta calculations
-            start_datetime = datetime.combine(today, start_time_obj)
-            end_datetime = start_datetime + timedelta(minutes=duration_in_minutes)
-            end_time_obj = end_datetime.time()
+                # Duration in 15-minute increments, from 1 to 4 hours
+                duration_in_minutes = random.randint(4, 16) * 15
+                start_datetime = datetime.combine(job_date, start_time_obj)
+                end_datetime = start_datetime + timedelta(minutes=duration_in_minutes)
 
-            # Handle jobs that cross midnight by moving them to the next day
-            job_date = today
-            if end_datetime.date() > today:
-                # This is a simple approach; for now, we just don't create jobs that span midnight
-                # to strictly adhere to the "same day" rule.
-                # A more complex approach could be to adjust the end time to 23:59.
-                # Let's just skip these for the seeder.
-                continue
+                # Skip jobs that span midnight
+                if end_datetime.date() > job_date:
+                    continue
 
-            recurrence_type = random.choice(['none', 'weekly', 'monthly'])
+                end_time_obj = end_datetime.time()
+
+                recurrence_type = random.choice(['none', 'weekly', 'monthly'])
             recurrence_frequency = 1
             if recurrence_type == 'weekly':
                 recurrence_frequency = random.randint(1, 4)
@@ -80,7 +80,7 @@ class Command(BaseCommand):
             job = Job.objects.create(
                 customer=customer,
                 description=fake.text(max_nb_chars=100),
-                address=customer.address,
+                job_type=random.choice([choice[0] for choice in Job.JOB_TYPE_CHOICES]),
                 date=job_date,
                 start_time=start_time_obj,
                 end_time=end_time_obj,

@@ -5,22 +5,28 @@ from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 def dashboard(request):
-    # Get the selected date from the request, default to today if not provided
+    view_type = request.GET.get('view_type', 'day')
     selected_date_str = request.GET.get('date', date.today().isoformat())
 
     try:
-        # Convert the string date to a datetime object
         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
-        # Handle invalid date format by defaulting to today
         selected_date = date.today()
 
-    # Filter jobs where the start_time is on the selected date
-    jobs = Job.objects.filter(date=selected_date).order_by('start_time')
+    if view_type == 'week':
+        start_of_week = selected_date - timedelta(days=selected_date.weekday())
+        end_of_week = start_of_week + timedelta(days=6)
+        jobs = Job.objects.filter(date__range=[start_of_week, end_of_week]).order_by('date', 'start_time')
+        date_display = f"{start_of_week.strftime('%d-%m-%Y')} to {end_of_week.strftime('%d-%m-%Y')}"
+    else: # Day view
+        jobs = Job.objects.filter(date=selected_date).order_by('start_time')
+        date_display = selected_date.strftime('%d-%m-%Y')
 
     context = {
         'jobs': jobs,
         'selected_date': selected_date,
+        'view_type': view_type,
+        'date_display': date_display,
         'status_choices': Job.STATUS_CHOICES,
     }
     return render(request, 'core/dashboard.html', context)

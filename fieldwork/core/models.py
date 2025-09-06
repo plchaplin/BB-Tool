@@ -3,7 +3,9 @@ from django.contrib.auth.models import User
 
 class Customer(models.Model):
     name = models.CharField(max_length=255)
-    address = models.TextField()
+    street = models.CharField(max_length=255)
+    town = models.CharField(max_length=255)
+    postcode = models.CharField(max_length=10)
     phone_number = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
 
@@ -18,10 +20,16 @@ class Job(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
+    JOB_TYPE_CHOICES = [
+        ('gardening', 'Gardening'),
+        ('landscaping', 'Landscaping'),
+        ('maintenance', 'Maintenance'),
+    ]
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     staff = models.ManyToManyField(User, related_name='jobs')
     description = models.TextField()
-    address = models.TextField()
+    job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, default='gardening')
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
