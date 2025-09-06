@@ -25,7 +25,18 @@ class Job(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
-    is_repeat_job = models.BooleanField(default=False)
+
+    RECURRENCE_CHOICES = [
+        ('none', 'None'),
+        ('weekly', 'Weekly'),
+        ('bi-weekly', 'Bi-weekly'),
+        ('monthly', 'Monthly'),
+    ]
+    recurrence = models.CharField(
+        max_length=20,
+        choices=RECURRENCE_CHOICES,
+        default='none'
+    )
 
     def __str__(self):
         return f"Job for {self.customer} on {self.start_time.strftime('%Y-%m-%d')}"
