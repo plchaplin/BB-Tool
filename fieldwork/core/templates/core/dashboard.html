@@ -2,62 +2,85 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Dashboard</title>
-    <style>
-        body { font-family: sans-serif; margin: 2em; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1em;}
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        h1 { text-align: center; }
-        .filter-form { text-align: center; margin-bottom: 2em; }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+    <header class="bg-light p-3 mb-4 border-bottom">
+        <div class="container">
+            <h1 class="h4">Fieldwork Dashboard</h1>
+        </div>
+    </header>
 
-    <div class="filter-form">
-        <form method="GET" action="{% url 'dashboard' %}">
-            <label for="date">Select Date:</label>
-            <input type="date" id="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
-            <button type="submit">Load</button>
-        </form>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h2>Jobs for {{ selected_date|date:"F d, Y" }}</h2>
+            </div>
+            <div class="col-md-6">
+                <form method="GET" action="{% url 'dashboard' %}" class="d-flex justify-content-end">
+                    <input type="date" id="date" name="date" class="form-control me-2" style="width: auto;" value="{{ selected_date|date:'Y-m-d' }}">
+                    <button type="submit" class="btn btn-primary">Load</button>
+                </form>
+            </div>
+        </div>
+
+        <table class="table table-striped table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col" style="width: 5%;"><input type="checkbox" class="form-check-input"></th>
+                    <th scope="col" style="width: 10%;">Start</th>
+                    <th scope="col" style="width: 10%;">End</th>
+                    <th scope="col" style="width: 20%;">Client</th>
+                    <th scope="col" style="width: 25%;">Services</th>
+                    <th scope="col" style="width: 15%;">Staff</th>
+                    <th scope="col" style="width: 15%;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td><input type="checkbox" class="form-check-input"></td>
+                    <td>{{ job.start_time|date:"H:i" }}</td>
+                    <td>{{ job.end_time|date:"H:i" }}</td>
+                    <td>
+                        {{ job.customer.name }}
+                        {% if job.recurrence != 'none' %}
+                            <span title="Recurring Job">&#x21bb;</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ job.description }}</td>
+                    <td>
+                        {% for staff_member in job.staff.all %}
+                            {{ staff_member.get_full_name|default:staff_member.username }}
+                            {% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            <span class="text-muted">Unassigned</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <form action="{% url 'update_job_status' job.id %}" method="POST" class="status-form">
+                            {% csrf_token %}
+                            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                {% for status_value, status_display in status_choices %}
+                                    <option value="{{ status_value }}" {% if job.status == status_value %}selected{% endif %}>
+                                        {{ status_display }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center p-4">No jobs scheduled for this date.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    <h1>Job Dashboard for {{ selected_date|date:"F d, Y" }}</h1>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Client</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Staff</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for job in jobs %}
-            <tr>
-                <td>{{ job.customer.name }}</td>
-                <td>{{ job.start_time|date:"H:i" }}</td>
-                <td>{{ job.end_time|date:"H:i" }}</td>
-                <td>{{ job.description }}</td>
-                <td>{{ job.get_status_display }}</td>
-                <td>
-                    {% for staff_member in job.staff.all %}
-                        {{ staff_member.get_full_name|default:staff_member.username }}
-                        {% if not forloop.last %}, {% endif %}
-                    {% empty %}
-                        Unassigned
-                    {% endfor %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" style="text-align: center;">No jobs scheduled for this date.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
