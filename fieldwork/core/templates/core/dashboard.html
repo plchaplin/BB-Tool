@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Job Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em;}
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        h1 { text-align: center; }
+        .filter-form { text-align: center; margin-bottom: 2em; }
+    </style>
+</head>
+<body>
+
+    <div class="filter-form">
+        <form method="GET" action="{% url 'dashboard' %}">
+            <label for="date">Select Date:</label>
+            <input type="date" id="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+            <button type="submit">Load</button>
+        </form>
+    </div>
+
+    <h1>Job Dashboard for {{ selected_date|date:"F d, Y" }}</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Staff</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>{{ job.customer.name }}</td>
+                <td>{{ job.start_time|date:"H:i" }}</td>
+                <td>{{ job.end_time|date:"H:i" }}</td>
+                <td>{{ job.description }}</td>
+                <td>{{ job.get_status_display }}</td>
+                <td>
+                    {% for staff_member in job.staff.all %}
+                        {{ staff_member.get_full_name|default:staff_member.username }}
+                        {% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        Unassigned
+                    {% endfor %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No jobs scheduled for this date.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
