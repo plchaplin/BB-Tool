@@ -90,7 +90,35 @@ class JobAdmin(admin.ModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+def get_duration_choices():
+    """Generates a list of duration choices in 30-minute increments up to 8 hours."""
+    choices = []
+    for minutes in range(30, 8 * 60 + 1, 30):
+        hours = minutes / 60
+        if hours == 1.0:
+            label = "1 hour"
+        elif hours.is_integer():
+            label = f"{int(hours)} hours"
+        else:
+            label = f"{hours} hours"
+        choices.append((minutes, label))
+    return choices
+
+
+class CustomerAdminForm(forms.ModelForm):
+    default_duration_minutes = forms.TypedChoiceField(
+        choices=get_duration_choices,
+        coerce=int,
+        label="Default duration"
+    )
+
+    class Meta:
+        model = Customer
+        fields = '__all__'
+
+
 class CustomerAdmin(admin.ModelAdmin):
+    form = CustomerAdminForm
     list_display = ('name', 'town', 'postcode', 'default_duration_minutes', 'default_recurrence_type')
     search_fields = ('name', 'postcode', 'street')
     fieldsets = (
