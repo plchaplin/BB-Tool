@@ -131,7 +131,14 @@
                         nowIndicator: true,
                         datesSet: function(dateInfo) {
                             const newDate = dateInfo.view.currentStart;
-                            const newDateStr = newDate.toISOString().split('T')[0];
+
+                            // Format the date manually to ensure it uses the local timezone,
+                            // avoiding mismatches with the server-rendered date string.
+                            const y = newDate.getFullYear();
+                            const m = String(newDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+                            const d = String(newDate.getDate()).padStart(2, '0');
+                            const newDateStr = `${y}-${m}-${d}`;
+
                             const currentUrlDate = '{{ selected_date|date:"Y-m-d" }}';
 
                             // To prevent a reload loop on initial page load, only redirect if the
