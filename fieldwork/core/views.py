@@ -35,7 +35,9 @@ def dashboard(request):
                     'start': datetime.combine(job.date, job.start_time).isoformat(),
                     'end': datetime.combine(job.date, job.end_time).isoformat(),
                 })
-        events_json = json.dumps(events)
+        # This is now a list of dicts, not a JSON string.
+        # The json_script tag in the template will handle serialization.
+        events_json = events
 
     context = {
         'jobs': jobs,
