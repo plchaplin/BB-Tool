@@ -4,6 +4,8 @@ from .models import Job
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
+import json
+
 def dashboard(request):
     view_type = request.GET.get('view_type', 'day')
     selected_date_str = request.GET.get('date', date.today().isoformat())
@@ -13,14 +15,27 @@ def dashboard(request):
     except (ValueError, TypeError):
         selected_date = date.today()
 
+    events_json = "[]"
+    jobs = Job.objects.all()
+
     if view_type == 'week':
         start_of_week = selected_date - timedelta(days=selected_date.weekday())
         end_of_week = start_of_week + timedelta(days=6)
-        jobs = Job.objects.filter(date__range=[start_of_week, end_of_week]).order_by('date', 'start_time')
+        jobs = jobs.filter(date__range=[start_of_week, end_of_week]).order_by('date', 'start_time')
         date_display = f"{start_of_week.strftime('%d-%m-%Y')} to {end_of_week.strftime('%d-%m-%Y')}"
     else:  # Day view
-        jobs = Job.objects.filter(date=selected_date).order_by('start_time')
+        jobs = jobs.filter(date=selected_date).order_by('start_time')
         date_display = selected_date.strftime('%d-%m-%Y')
+
+        events = []
+        for job in jobs:
+            if job.date and job.start_time and job.end_time:
+                events.append({
+                    'title': f"{job.customer.name} ({job.get_job_type_display()})",
+                    'start': datetime.combine(job.date, job.start_time).isoformat(),
+                    'end': datetime.combine(job.date, job.end_time).isoformat(),
+                })
+        events_json = json.dumps(events)
 
     context = {
         'jobs': jobs,
@@ -28,6 +43,7 @@ def dashboard(request):
         'view_type': view_type,
         'date_display': date_display,
         'status_choices': Job.STATUS_CHOICES,
+        'events_json': events_json,
     }
     return render(request, 'core/dashboard.html', context)
 
