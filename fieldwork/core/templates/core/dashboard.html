@@ -118,7 +118,6 @@
                     const eventsData = JSON.parse(document.getElementById('events-data').textContent);
 
                     var calendar = new FullCalendar.Calendar(calendarEl, {
-                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                         initialView: 'timelineDay',
                         initialDate: '{{ selected_date|date:"Y-m-d" }}',
                         events: eventsData,
@@ -127,7 +126,9 @@
                             center: 'title',
                             right: ''
                         },
-                        resourceAreaHeaderContent: 'Jobs'
+                        slotMinTime: '07:00:00',
+                        slotMaxTime: '18:00:00',
+                        nowIndicator: true
                     });
                     calendar.render();
                 }
