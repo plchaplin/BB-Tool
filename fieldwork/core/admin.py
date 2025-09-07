@@ -1,7 +1,25 @@
 from django.contrib import admin
 from django import forms
-from .models import Customer, Job
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
+from .models import Customer, Job, StaffProfile
 from .widgets import TimeSelectWidget
+
+# Define an inline admin descriptor for StaffProfile model
+# which acts a bit like a singleton
+class StaffProfileInline(admin.StackedInline):
+    model = StaffProfile
+    can_delete = False
+    verbose_name_plural = 'profile'
+
+# Define a new User admin
+class UserAdmin(BaseUserAdmin):
+    inlines = (StaffProfileInline,)
+
+# Re-register UserAdmin
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
+
 
 class JobAdminForm(forms.ModelForm):
     date = forms.DateField(widget=admin.widgets.AdminDateWidget)

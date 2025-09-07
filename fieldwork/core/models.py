@@ -52,3 +52,14 @@ class Job(models.Model):
 
     def __str__(self):
         return f"Job for {self.customer} on {self.date.strftime('%Y-%m-%d')}"
+
+class StaffProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='staffprofile')
+    street = models.CharField(max_length=255, blank=True)
+    town = models.CharField(max_length=255, blank=True)
+    postcode = models.CharField(max_length=10, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    contracted_hours_per_day = models.DecimalField(max_digits=4, decimal_places=2, default=8.00)
+
+    def __str__(self):
+        return self.user.username

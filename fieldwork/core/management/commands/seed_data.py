@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
 from faker import Faker
-from core.models import Customer, Job
+from core.models import Customer, Job, StaffProfile
 
 class Command(BaseCommand):
     help = 'Seeds the database with sample data'
@@ -36,6 +36,16 @@ class Command(BaseCommand):
             user.set_password('password')
             user.last_login = timezone.now()
             user.save()
+
+            # Create a profile for the staff user
+            StaffProfile.objects.create(
+                user=user,
+                street=fake.street_address(),
+                town=fake.city(),
+                postcode=fake.postcode(),
+                phone_number=fake.phone_number(),
+                contracted_hours_per_day=random.choice([4, 6, 8])
+            )
             staff_users.append(user)
 
         # Create customers
