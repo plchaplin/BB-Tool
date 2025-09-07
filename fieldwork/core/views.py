@@ -52,41 +52,58 @@ def dashboard(request):
 @require_POST
 def update_job_status(request, job_id):
     job = get_object_or_404(Job, id=job_id)
-    original_recurrence_type = job.recurrence_type
-    original_recurrence_frequency = job.recurrence_frequency
 
     new_status = request.POST.get('status')
     if new_status in [status[0] for status in Job.STATUS_CHOICES]:
         job.status = new_status
         job.save()
 
-    if job.status == 'completed' and original_recurrence_type != 'none':
-        # Create the next job in the series
+    # Check for recurrence based on the CUSTOMER's settings, not the individual job's.
+    customer_recurrence_type = job.customer.default_recurrence_type
+    customer_recurrence_freq = job.customer.default_recurrence_frequency
+
+    if job.status == 'completed' and customer_recurrence_type != 'none':
+        # Create the next job in the series from the completed one
         new_job = job
-        new_job.pk = None  # This will create a new instance
+        new_job.pk = None  # This will create a new instance when saved
 
         delta = None
-        if original_recurrence_type == 'weekly':
-            delta = timedelta(weeks=original_recurrence_frequency)
-        elif original_recurrence_type == 'monthly':
-            delta = relativedelta(months=original_recurrence_frequency)
+        if customer_recurrence_type == 'weekly':
+            delta = timedelta(weeks=customer_recurrence_freq)
+        elif customer_recurrence_type == 'monthly':
+            delta = relativedelta(months=customer_recurrence_freq)
 
         if delta:
             new_job.date = job.date + delta
             new_job.status = 'scheduled'
-            # The start_time and end_time remain the same
+
+            # The start_time remains the same as the completed job
             new_job.start_time = job.start_time
-            new_job.end_time = job.end_time
-            # Keep the recurrence for the new job
-            new_job.recurrence_type = original_recurrence_type
-            new_job.recurrence_frequency = original_recurrence_frequency
+
+            # Calculate new end_time based on customer's default duration
+            if job.customer.default_duration_minutes:
+                # Combine date and time to create a datetime object for calculation
+                start_datetime = datetime.combine(new_job.date, new_job.start_time)
+                end_datetime = start_datetime + timedelta(minutes=job.customer.default_duration_minutes)
+                new_job.end_time = end_datetime.time()
+            else:
+                # Fallback to old duration if no default is set for the customer
+                new_job.end_time = job.end_time
+
+            # The new job should inherit the customer's default recurrence settings
+            new_job.recurrence_type = job.customer.default_recurrence_type
+            new_job.recurrence_frequency = job.customer.default_recurrence_frequency
+
             new_job.save()
+            # Ensure staff are carried over to the new job
             new_job.staff.set(job.staff.all())
 
-            # Mark the original job as non-recurring
+            # Mark the original job as non-recurring so this logic isn't triggered again
+            # from this specific job instance.
             job.recurrence_type = 'none'
             job.save()
 
-    # Preserve the date filter
-    selected_date = job.date.strftime('%Y-%m-%d')
-    return redirect(f"/?date={selected_date}")
+    # Preserve the view type and date filter on redirect
+    selected_date_str = job.date.strftime('%Y-%m-%d')
+    view_type = request.GET.get('view_type', 'day') # 'week' or 'day'
+    return redirect(f"/?view_type={view_type}&date={selected_date_str}")

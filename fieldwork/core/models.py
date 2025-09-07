@@ -1,6 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+RECURRENCE_TYPE_CHOICES = [
+    ('none', 'None'),
+    ('weekly', 'Weekly'),
+    ('monthly', 'Monthly'),
+]
+
 class Customer(models.Model):
     name = models.CharField(max_length=255)
     street = models.CharField(max_length=255)
@@ -8,6 +14,11 @@ class Customer(models.Model):
     postcode = models.CharField(max_length=10)
     phone_number = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
+
+    # Default settings for new jobs
+    default_duration_minutes = models.IntegerField(default=60, help_text="Default job duration in minutes")
+    default_recurrence_type = models.CharField(max_length=20, choices=RECURRENCE_TYPE_CHOICES, default='none')
+    default_recurrence_frequency = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return self.name
@@ -35,11 +46,6 @@ class Job(models.Model):
     end_time = models.TimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
 
-    RECURRENCE_TYPE_CHOICES = [
-        ('none', 'None'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
-    ]
     recurrence_type = models.CharField(
         max_length=20,
         choices=RECURRENCE_TYPE_CHOICES,
