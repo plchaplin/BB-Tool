@@ -109,7 +109,7 @@
 {% block scripts %}
     {% if view_type == 'day' %}
         {{ events_json|json_script:"events-data" }}
-        <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js'></script>
+        <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.19/index.global.min.js'></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 if (document.getElementById('calendar')) {
@@ -118,14 +118,16 @@
                     const eventsData = JSON.parse(document.getElementById('events-data').textContent);
 
                     var calendar = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'timeGridDay',
+                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+                        initialView: 'timelineDay',
                         initialDate: '{{ selected_date|date:"Y-m-d" }}',
                         events: eventsData,
                         headerToolbar: {
-                            left: '',
-                            center: '',
+                            left: 'prev,next',
+                            center: 'title',
                             right: ''
-                        }
+                        },
+                        resourceAreaHeaderContent: 'Jobs'
                     });
                     calendar.render();
                 }
