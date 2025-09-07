@@ -21,6 +21,7 @@ admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 
 
+import json
 from datetime import datetime, timedelta
 
 class JobAdminForm(forms.ModelForm):
@@ -34,6 +35,12 @@ class JobAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Add all customer durations as a data attribute for our JS to use
+        customers = Customer.objects.all()
+        customer_durations = {c.id: c.default_duration_minutes for c in customers}
+        self.fields['customer'].widget.attrs['data-durations'] = json.dumps(customer_durations)
+
         instance = kwargs.get('instance')
         # On the change form, show the customer's defaults as help text
         if instance and instance.pk and instance.customer:
@@ -60,6 +67,9 @@ class JobAdmin(admin.ModelAdmin):
     list_display = ('customer', 'job_type', 'date', 'start_time', 'end_time', 'status', 'recurrence_type', 'recurrence_frequency')
     list_filter = ('status', 'job_type', 'recurrence_type', 'date')
     search_fields = ('customer__name', 'description')
+
+    class Media:
+        js = ("core/js/job_admin.js",)
 
     def save_model(self, request, obj, form, change):
         # If creating a new job, apply customer defaults for fields the user hasn't touched.
