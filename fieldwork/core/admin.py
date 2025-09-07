@@ -4,6 +4,7 @@ from .models import Customer, Job
 from .widgets import TimeSelectWidget
 
 class JobAdminForm(forms.ModelForm):
+    date = forms.DateField(widget=admin.widgets.AdminDateWidget)
     start_time = forms.TimeField(widget=TimeSelectWidget)
     end_time = forms.TimeField(widget=TimeSelectWidget)
 
