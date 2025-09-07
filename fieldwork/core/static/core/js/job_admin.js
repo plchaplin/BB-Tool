@@ -1,64 +1,78 @@
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("[Job Admin] DOMContentLoaded: Script starting.");
+
     const customerSelect = document.getElementById('id_customer');
     const startTimeSelect = document.getElementById('id_start_time');
     const endTimeSelect = document.getElementById('id_end_time');
 
-    // Exit if any of the required elements are not on the page.
     if (!customerSelect || !startTimeSelect || !endTimeSelect) {
+        console.error("[Job Admin] Error: One or more required form elements not found. Exiting.");
         return;
     }
+    console.log("[Job Admin] All form elements found successfully.");
 
     let customerDurations = {};
     try {
-        // The data-durations attribute holds a JSON string mapping customer IDs to their default job duration in minutes.
-        customerDurations = JSON.parse(customerSelect.dataset.durations);
+        const durationsData = customerSelect.dataset.durations;
+        console.log("[Job Admin] Raw data-durations attribute:", durationsData);
+        if (!durationsData) {
+            throw new Error("data-durations attribute is empty or missing.");
+        }
+        customerDurations = JSON.parse(durationsData);
+        console.log("[Job Admin] Parsed customer durations:", customerDurations);
     } catch (e) {
-        console.error("Could not parse customer durations data from the 'data-durations' attribute.", e);
+        console.error("[Job Admin] Error parsing customer durations data:", e);
         return;
     }
 
-    /**
-     * Calculates and sets the end time based on the selected customer's default duration and the selected start time.
-     */
     function updateEndTime() {
-        const customerId = customerSelect.value;
-        const duration = customerDurations[customerId]; // Duration in minutes
-        const startTime = startTimeSelect.value; // Format "HH:MM:SS"
+        console.log("[Job Admin] updateEndTime() called.");
 
-        // We need all three values to proceed.
+        const customerId = customerSelect.value;
+        const duration = customerDurations[customerId];
+        const startTime = startTimeSelect.value;
+
+        console.log(`[Job Admin] Current values: customerId='${customerId}', duration='${duration}', startTime='${startTime}'`);
+
         if (!customerId || !duration || !startTime) {
+            console.log("[Job Admin] Not enough info to calculate end time. Aborting update.");
             return;
         }
 
-        // --- Time Calculation ---
+        console.log("[Job Admin] Calculating new end time...");
         const timeParts = startTime.split(':');
         const hours = parseInt(timeParts[0], 10);
         const minutes = parseInt(timeParts[1], 10);
 
-        // Use a dummy date object to safely perform time calculations.
         const date = new Date(2000, 0, 1, hours, minutes);
         date.setMinutes(date.getMinutes() + duration);
 
         const endHours = String(date.getHours()).padStart(2, '0');
         const endMinutes = String(date.getMinutes()).padStart(2, '0');
 
-        // The TimeSelectWidget uses values in "HH:MM:SS" format.
         const newEndTimeValue = `${endHours}:${endMinutes}:00`;
+        console.log(`[Job Admin] Calculated newEndTimeValue: '${newEndTimeValue}'`);
 
-        // --- Update End Time Dropdown ---
-        // Find the option that matches the calculated time and select it.
+        let optionFound = false;
         for (let i = 0; i < endTimeSelect.options.length; i++) {
             if (endTimeSelect.options[i].value === newEndTimeValue) {
                 endTimeSelect.options[i].selected = true;
+                optionFound = true;
+                console.log(`[Job Admin] Found and selected matching option in end_time dropdown.`);
                 break;
             }
         }
+
+        if (!optionFound) {
+            console.warn(`[Job Admin] Warning: Could not find an option with value '${newEndTimeValue}' in the end_time dropdown.`);
+        }
     }
 
-    // Add event listeners to trigger the update function whenever the customer or start time changes.
+    console.log("[Job Admin] Attaching event listeners...");
     customerSelect.addEventListener('change', updateEndTime);
     startTimeSelect.addEventListener('change', updateEndTime);
 
-    // Run the function once on page load to set the initial end time if a customer is already selected.
+    console.log("[Job Admin] Performing initial call to updateEndTime()...");
     updateEndTime();
+    console.log("[Job Admin] Script initialization complete.");
 });
