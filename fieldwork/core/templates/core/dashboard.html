@@ -128,7 +128,18 @@
                         },
                         slotMinTime: '07:00:00',
                         slotMaxTime: '18:00:00',
-                        nowIndicator: true
+                        nowIndicator: true,
+                        datesSet: function(dateInfo) {
+                            const newDate = dateInfo.view.currentStart;
+                            const newDateStr = newDate.toISOString().split('T')[0];
+                            const currentUrlDate = '{{ selected_date|date:"Y-m-d" }}';
+
+                            // To prevent a reload loop on initial page load, only redirect if the
+                            // calendar's date is different from the date in the URL.
+                            if (newDateStr !== currentUrlDate) {
+                                window.location.href = `?view_type=day&date=${newDateStr}`;
+                            }
+                        }
                     });
                     calendar.render();
                 }
