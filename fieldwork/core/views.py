@@ -6,18 +6,32 @@ from dateutil.relativedelta import relativedelta
 
 import json
 
+from django.contrib.auth.models import User
+
+
 def dashboard(request):
     view_type = request.GET.get('view_type', 'day')
     selected_date_str = request.GET.get('date', date.today().isoformat())
+    selected_staff_id = request.GET.get('staff_id', 'all')
 
     try:
         selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
     except (ValueError, TypeError):
         selected_date = date.today()
 
-    events_json = "[]"
-    jobs = Job.objects.all()
+    # Base queryset for jobs
+    jobs = Job.objects.prefetch_related('staff', 'customer').all()
 
+    # Filter by staff member if one is selected
+    if selected_staff_id and selected_staff_id != 'all':
+        try:
+            staff_id = int(selected_staff_id)
+            jobs = jobs.filter(staff__id=staff_id)
+        except (ValueError, TypeError):
+            # Catcher for if staff_id is not a valid number
+            pass
+
+    # Filter by date range based on the view type
     if view_type == 'week':
         start_of_week = selected_date - timedelta(days=selected_date.weekday())
         end_of_week = start_of_week + timedelta(days=6)
@@ -27,17 +41,25 @@ def dashboard(request):
         jobs = jobs.filter(date=selected_date).order_by('start_time')
         date_display = selected_date.strftime('%d-%m-%Y')
 
-        events = []
+    # Prepare events for FullCalendar, now including staff names in the title
+    events = []
+    if view_type == 'day':
         for job in jobs:
             if job.date and job.start_time and job.end_time:
+                staff_names = ", ".join([s.get_full_name() or s.username for s in job.staff.all()])
+                title = f"{job.customer.name} ({job.get_job_type_display()})"
+                if staff_names:
+                    title += f" - {staff_names}"
+
                 events.append({
-                    'title': f"{job.customer.name} ({job.get_job_type_display()})",
+                    'title': title,
                     'start': datetime.combine(job.date, job.start_time).isoformat(),
                     'end': datetime.combine(job.date, job.end_time).isoformat(),
+                    'resourceIds': [s.id for s in job.staff.all()] # For potential future use
                 })
-        # This is now a list of dicts, not a JSON string.
-        # The json_script tag in the template will handle serialization.
-        events_json = events
+
+    # Get all staff members for the filter dropdown
+    staff_list = User.objects.filter(staffprofile__isnull=False).order_by('first_name', 'last_name')
 
     context = {
         'jobs': jobs,
@@ -45,7 +67,9 @@ def dashboard(request):
         'view_type': view_type,
         'date_display': date_display,
         'status_choices': Job.STATUS_CHOICES,
-        'events_json': events_json,
+        'events_json': events,
+        'staff_list': staff_list,
+        'selected_staff_id': selected_staff_id,
     }
     return render(request, 'core/dashboard.html', context)
 

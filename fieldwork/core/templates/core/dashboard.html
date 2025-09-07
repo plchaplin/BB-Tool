@@ -10,6 +10,16 @@
         <div class="col-md-6">
             <form method="GET" action="{% url 'dashboard' %}" class="d-flex justify-content-end align-items-center">
                 <input type="hidden" name="view_type" value="{{ view_type }}">
+
+                <select name="staff_id" class="form-select me-2" style="width: auto;" onchange="this.form.submit()">
+                    <option value="all" {% if selected_staff_id == 'all' %}selected{% endif %}>All Staff</option>
+                    {% for staff in staff_list %}
+                        <option value="{{ staff.id }}" {% if selected_staff_id == staff.id|stringformat:"s" %}selected{% endif %}>
+                            {{ staff.get_full_name|default:staff.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+
                 <input type="date" id="date" name="date" class="form-control me-2" style="width: auto;" value="{{ selected_date|date:'Y-m-d' }}">
                 <button type="submit" class="btn btn-primary">Load</button>
             </form>
