@@ -38,7 +38,7 @@
     </ul>
 
     {% if view_type == 'day' %}
-        <div id='calendar'></div>
+        <div id="calendar" data-is-superuser="{{ user.is_superuser|yesno:'true,false' }}"></div>
     {% else %}
         {% regroup jobs by date as jobs_by_day %}
 
@@ -200,6 +200,7 @@
             document.addEventListener('DOMContentLoaded', function() {
                 if (document.getElementById('calendar')) {
                     var calendarEl = document.getElementById('calendar');
+                    const isSuperuser = calendarEl.dataset.isSuperuser === 'true';
 
                     const eventsData = JSON.parse(document.getElementById('events-data').textContent);
 
@@ -269,6 +270,12 @@
                             } else if (props.status === 'in_progress') {
                                 modalFooter.innerHTML += `<button type="button" class="btn btn-warning" data-job-id="${props.job_id}" data-new-status="completed">Check Out</button>`;
                             }
+
+                            if (isSuperuser && props.admin_url) {
+                                const editButton = `<a href="${props.admin_url}" class="btn btn-info me-auto" target="_blank">Edit Job</a>`;
+                                modalFooter.insertAdjacentHTML('afterbegin', editButton);
+                            }
+
                             modalFooter.innerHTML += '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>';
 
                             // Show Modal

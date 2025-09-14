@@ -113,7 +113,8 @@ def dashboard(request):
                     'extendedProps': {
                         'job_id': job.id, 'description': job.description, 'customer_name': job.customer.name,
                         'address': address, 'status': job.status, 'status_display': job.get_status_display(),
-                        'logs': logs, 'update_url': reverse('update_job_status', args=[job.id])
+                        'logs': logs, 'update_url': reverse('update_job_status', args=[job.id]),
+                        'admin_url': reverse('admin:core_job_change', args=[job.id])
                     }
                 }
                 if job.id in conflicting_job_ids:
