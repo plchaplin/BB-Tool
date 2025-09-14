@@ -9,6 +9,10 @@ import json
 from django.contrib.auth.models import User
 
 
+from collections import defaultdict
+from django.contrib.auth.models import User
+
+
 def dashboard(request):
     view_type = request.GET.get('view_type', 'day')
     selected_date_str = request.GET.get('date', date.today().isoformat())
@@ -28,7 +32,6 @@ def dashboard(request):
             staff_id = int(selected_staff_id)
             jobs = jobs.filter(staff__id=staff_id)
         except (ValueError, TypeError):
-            # Catcher for if staff_id is not a valid number
             pass
 
     # Filter by date range based on the view type
@@ -41,7 +44,24 @@ def dashboard(request):
         jobs = jobs.filter(date=selected_date).order_by('start_time')
         date_display = selected_date.strftime('%d-%m-%Y')
 
-    # Prepare events for FullCalendar, now including staff names in the title
+    # --- Conflict Detection ---
+    conflicting_job_ids = set()
+    if view_type == 'day':
+        staff_schedules = defaultdict(list)
+        for job in jobs:
+            for staff in job.staff.all():
+                staff_schedules[staff.id].append(job)
+
+        for staff_id, staff_jobs in staff_schedules.items():
+            sorted_jobs = sorted(staff_jobs, key=lambda j: j.start_time)
+            for i in range(1, len(sorted_jobs)):
+                prev_job = sorted_jobs[i-1]
+                current_job = sorted_jobs[i]
+                if current_job.start_time < prev_job.end_time:
+                    conflicting_job_ids.add(prev_job.id)
+                    conflicting_job_ids.add(current_job.id)
+
+    # Prepare events for FullCalendar, now including staff names and conflict coloring
     events = []
     if view_type == 'day':
         for job in jobs:
@@ -51,12 +71,16 @@ def dashboard(request):
                 if staff_names:
                     title += f" - {staff_names}"
 
-                events.append({
+                event_data = {
                     'title': title,
                     'start': datetime.combine(job.date, job.start_time).isoformat(),
                     'end': datetime.combine(job.date, job.end_time).isoformat(),
-                    'resourceIds': [s.id for s in job.staff.all()] # For potential future use
-                })
+                    'resourceIds': [s.id for s in job.staff.all()]
+                }
+                if job.id in conflicting_job_ids:
+                    event_data['color'] = '#dc3545'  # Bootstrap danger red
+
+                events.append(event_data)
 
     # Get all staff members for the filter dropdown
     staff_list = User.objects.filter(staffprofile__isnull=False).order_by('first_name', 'last_name')
