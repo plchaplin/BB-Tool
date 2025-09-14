@@ -114,6 +114,41 @@
             </div>
         {% endfor %}
     {% endif %}
+
+    <div class="row mt-5">
+        {% if view_type == 'day' and staff_availability %}
+        <div class="col-md-6">
+            <h4>Staff Availability <span class="text-muted fs-6 fw-normal">{{ selected_date|date:"l, d M" }}</span></h4>
+            <ul class="list-group">
+                {% for staff in staff_availability %}
+                <li class="list-group-item d-flex justify-content-between align-items-center
+                    {% if staff.unallocated_hours > 0 %}list-group-item-success{% else %}list-group-item-light{% endif %}">
+                    {{ staff.name }}
+                    <span class="badge
+                        {% if staff.unallocated_hours > 4 %}bg-success
+                        {% elif staff.unallocated_hours > 0 %}bg-warning text-dark
+                        {% else %}bg-secondary
+                        {% endif %} rounded-pill">
+                        {{ staff.unallocated_hours }} / {{ staff.contracted_hours }} hours free
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if potential_job_customers %}
+        <div class="col-md-6">
+            <h4>Potential Jobs to Schedule</h4>
+            <p class="text-muted">Customers with no scheduled work on or after today.</p>
+            <ul class="list-group">
+                {% for customer in potential_job_customers %}
+                <li class="list-group-item">{{ customer.name }} - {{ customer.town }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -138,6 +173,7 @@
                         },
                         slotMinTime: '07:00:00',
                         slotMaxTime: '18:00:00',
+                        height: 'auto',
                         nowIndicator: true,
                         datesSet: function(dateInfo) {
                             const newDate = dateInfo.view.currentStart;

@@ -13,6 +13,11 @@ from collections import defaultdict
 from django.contrib.auth.models import User
 
 
+from collections import defaultdict
+from django.contrib.auth.models import User
+from .models import Customer, Job
+
+
 def dashboard(request):
     view_type = request.GET.get('view_type', 'day')
     selected_date_str = request.GET.get('date', date.today().isoformat())
@@ -44,9 +49,15 @@ def dashboard(request):
         jobs = jobs.filter(date=selected_date).order_by('start_time')
         date_display = selected_date.strftime('%d-%m-%Y')
 
-    # --- Conflict Detection ---
-    conflicting_job_ids = set()
+    # Get all staff members for the filter dropdown and availability calculation
+    staff_list = User.objects.filter(staffprofile__isnull=False).order_by('first_name', 'last_name')
+
+    # --- Day View Specific Logic ---
+    events = []
+    staff_availability = []
     if view_type == 'day':
+        # --- Conflict Detection & Staff Schedules ---
+        conflicting_job_ids = set()
         staff_schedules = defaultdict(list)
         for job in jobs:
             for staff in job.staff.all():
@@ -61,9 +72,28 @@ def dashboard(request):
                     conflicting_job_ids.add(prev_job.id)
                     conflicting_job_ids.add(current_job.id)
 
-    # Prepare events for FullCalendar, now including staff names and conflict coloring
-    events = []
-    if view_type == 'day':
+        # --- Staff Availability Calculation ---
+        for staff_member in staff_list:
+            jobs_today = staff_schedules.get(staff_member.id, [])
+            total_duration_seconds = 0
+            for job in jobs_today:
+                if job.start_time and job.end_time:
+                    start_dt = datetime.combine(date.min, job.start_time)
+                    end_dt = datetime.combine(date.min, job.end_time)
+                    total_duration_seconds += (end_dt - start_dt).total_seconds()
+
+            allocated_hours = total_duration_seconds / 3600
+            contracted_hours = float(staff_member.staffprofile.contracted_hours_per_day)
+            unallocated_hours = contracted_hours - allocated_hours
+
+            staff_availability.append({
+                'name': staff_member.get_full_name() or staff_member.username,
+                'allocated_hours': round(allocated_hours, 2),
+                'unallocated_hours': round(unallocated_hours, 2)
+            })
+        staff_availability.sort(key=lambda x: x['unallocated_hours'], reverse=True)
+
+        # --- Event Preparation for FullCalendar ---
         for job in jobs:
             if job.date and job.start_time and job.end_time:
                 staff_names = ", ".join([s.get_full_name() or s.username for s in job.staff.all()])
@@ -78,12 +108,18 @@ def dashboard(request):
                     'resourceIds': [s.id for s in job.staff.all()]
                 }
                 if job.id in conflicting_job_ids:
-                    event_data['color'] = '#dc3545'  # Bootstrap danger red
+                    event_data['color'] = '#dc3545'
 
                 events.append(event_data)
 
-    # Get all staff members for the filter dropdown
-    staff_list = User.objects.filter(staffprofile__isnull=False).order_by('first_name', 'last_name')
+    # --- Potential Jobs Calculation (independent of view type) ---
+    customers_with_future_jobs = Customer.objects.filter(
+        job__date__gte=date.today(),
+        job__status__in=['scheduled', 'in_progress']
+    ).distinct()
+    potential_job_customers = Customer.objects.exclude(
+        id__in=customers_with_future_jobs.values_list('id', flat=True)
+    )
 
     context = {
         'jobs': jobs,
@@ -94,6 +130,8 @@ def dashboard(request):
         'events_json': events,
         'staff_list': staff_list,
         'selected_staff_id': selected_staff_id,
+        'staff_availability': staff_availability,
+        'potential_job_customers': potential_job_customers,
     }
     return render(request, 'core/dashboard.html', context)
 
