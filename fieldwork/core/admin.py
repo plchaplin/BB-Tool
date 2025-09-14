@@ -119,7 +119,7 @@ class CustomerAdminForm(forms.ModelForm):
 
 class CustomerAdmin(admin.ModelAdmin):
     form = CustomerAdminForm
-    list_display = ('name', 'town', 'postcode', 'default_duration_minutes', 'default_recurrence_type')
+    list_display = ('name', 'town', 'postcode', 'hourly_rate', 'default_duration_minutes', 'default_recurrence_type')
     search_fields = ('name', 'postcode', 'street')
     fieldsets = (
         ('Contact Info', {
@@ -128,8 +128,14 @@ class CustomerAdmin(admin.ModelAdmin):
         ('Address', {
             'fields': ('street', 'town', 'postcode')
         }),
-        ('Job Defaults', {
-            'fields': ('default_duration_minutes', 'default_recurrence_type', 'default_recurrence_frequency')
+        ('Job & Billing Defaults', {
+            'fields': ('hourly_rate', 'default_duration_minutes', 'default_recurrence_type', 'default_recurrence_frequency')
+        }),
+        ('Scheduling Constraints', {
+            'fields': ('day_constraint_type',
+                       ('can_visit_monday', 'can_visit_tuesday', 'can_visit_wednesday',
+                        'can_visit_thursday', 'can_visit_friday', 'can_visit_saturday',
+                        'can_visit_sunday'))
         }),
     )
 

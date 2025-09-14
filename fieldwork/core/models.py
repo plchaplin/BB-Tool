@@ -20,6 +20,28 @@ class Customer(models.Model):
     default_recurrence_type = models.CharField(max_length=20, choices=RECURRENCE_TYPE_CHOICES, default='none')
     default_recurrence_frequency = models.PositiveIntegerField(default=1)
 
+    # New fields for billing and scheduling constraints
+    hourly_rate = models.DecimalField(max_digits=6, decimal_places=2, default=0.00, help_text="Billing rate in pounds per hour")
+
+    DAY_CONSTRAINT_CHOICES = [
+        ('preferred', 'Preferred Day(s)'),
+        ('required', 'Required Day(s)'),
+    ]
+    day_constraint_type = models.CharField(
+        max_length=10,
+        choices=DAY_CONSTRAINT_CHOICES,
+        default='preferred',
+        help_text="Are the selected days a preference or a strict requirement?"
+    )
+
+    can_visit_monday = models.BooleanField(default=True, verbose_name="Mon")
+    can_visit_tuesday = models.BooleanField(default=True, verbose_name="Tue")
+    can_visit_wednesday = models.BooleanField(default=True, verbose_name="Wed")
+    can_visit_thursday = models.BooleanField(default=True, verbose_name="Thu")
+    can_visit_friday = models.BooleanField(default=True, verbose_name="Fri")
+    can_visit_saturday = models.BooleanField(default=False, verbose_name="Sat")
+    can_visit_sunday = models.BooleanField(default=False, verbose_name="Sun")
+
     def __str__(self):
         return self.name
 
