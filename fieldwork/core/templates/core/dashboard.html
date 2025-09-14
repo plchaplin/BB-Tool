@@ -93,16 +93,26 @@
                             {% endfor %}
                         </td>
                         <td>
-                            <form action="{% url 'update_job_status' job.id %}" method="POST" class="status-form">
-                                {% csrf_token %}
-                                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-                                    {% for status_value, status_display in status_choices %}
-                                        <option value="{{ status_value }}" {% if job.status == status_value %}selected{% endif %}>
-                                            {{ status_display }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </form>
+                            {% if job.status == 'scheduled' %}
+                                <form action="{% url 'update_job_status' job.id %}" method="POST" class="m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="in_progress">
+                                    <button type="submit" class="btn btn-success btn-sm">Check In</button>
+                                </form>
+                            {% elif job.status == 'in_progress' %}
+                                <form action="{% url 'update_job_status' job.id %}" method="POST" class="m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="completed">
+                                    <button type="submit" class="btn btn-warning btn-sm">Check Out</button>
+                                </form>
+                            {% else %}
+                                <span class="badge
+                                    {% if job.status == 'completed' %}bg-secondary
+                                    {% elif job.status == 'cancelled' %}bg-danger
+                                    {% endif %}">
+                                    {{ job.get_status_display }}
+                                </span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
