@@ -87,7 +87,15 @@ class StaffProfile(models.Model):
     town = models.CharField(max_length=255, blank=True)
     postcode = models.CharField(max_length=10, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
-    contracted_hours_per_day = models.DecimalField(max_digits=4, decimal_places=2, default=8.00)
+
+    # New per-day hours
+    hours_monday = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name="Mon")
+    hours_tuesday = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name="Tue")
+    hours_wednesday = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name="Wed")
+    hours_thursday = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name="Thu")
+    hours_friday = models.DecimalField(max_digits=4, decimal_places=2, default=8.00, verbose_name="Fri")
+    hours_saturday = models.DecimalField(max_digits=4, decimal_places=2, default=0.00, verbose_name="Sat")
+    hours_sunday = models.DecimalField(max_digits=4, decimal_places=2, default=0.00, verbose_name="Sun")
 
     def __str__(self):
         return self.user.username

@@ -83,12 +83,20 @@ def dashboard(request):
                     total_duration_seconds += (end_dt - start_dt).total_seconds()
 
             allocated_hours = total_duration_seconds / 3600
-            contracted_hours = float(staff_member.staffprofile.contracted_hours_per_day)
+
+            # Get the day name to construct the field name, e.g., 'hours_monday'
+            day_name = selected_date.strftime('%A').lower()
+            hours_field_name = f'hours_{day_name}'
+
+            # Get the contracted hours for the specific day using getattr
+            contracted_hours = float(getattr(staff_member.staffprofile, hours_field_name, 0))
+
             unallocated_hours = contracted_hours - allocated_hours
 
             staff_availability.append({
                 'name': staff_member.get_full_name() or staff_member.username,
                 'allocated_hours': round(allocated_hours, 2),
+                'contracted_hours': contracted_hours,
                 'unallocated_hours': round(unallocated_hours, 2)
             })
         staff_availability.sort(key=lambda x: x['unallocated_hours'], reverse=True)

@@ -11,6 +11,9 @@ class StaffProfileInline(admin.StackedInline):
     model = StaffProfile
     can_delete = False
     verbose_name_plural = 'profile'
+    fields = ('phone_number',
+              ('hours_monday', 'hours_tuesday', 'hours_wednesday', 'hours_thursday',
+               'hours_friday', 'hours_saturday', 'hours_sunday'))
 
 # Define a new User admin
 class UserAdmin(BaseUserAdmin):
