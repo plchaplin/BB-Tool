@@ -161,6 +161,35 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- Job Details Modal -->
+    <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="jobDetailsModalLabel">Job Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h4 id="modal-customer-name"></h4>
+                    <p><strong class="me-2">Address:</strong><span id="modal-address"></span></p>
+                    <p><strong class="me-2">Status:</strong><span id="modal-status" class="badge"></span></p>
+                    <hr>
+                    <h5>Description</h5>
+                    <p id="modal-description"></p>
+                    <hr>
+                    <h5>Job Log</h5>
+                    <ul class="list-group" id="modal-logs">
+                        <!-- Log items will be inserted here by JavaScript -->
+                    </ul>
+                </div>
+                <div class="modal-footer" id="modal-footer">
+                    <!-- Action buttons will be inserted here by JavaScript -->
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block scripts %}
@@ -189,24 +218,99 @@
                         nowIndicator: true,
                         datesSet: function(dateInfo) {
                             const newDate = dateInfo.view.currentStart;
-
-                            // Format the date manually to ensure it uses the local timezone,
-                            // avoiding mismatches with the server-rendered date string.
                             const y = newDate.getFullYear();
-                            const m = String(newDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+                            const m = String(newDate.getMonth() + 1).padStart(2, '0');
                             const d = String(newDate.getDate()).padStart(2, '0');
                             const newDateStr = `${y}-${m}-${d}`;
-
                             const currentUrlDate = '{{ selected_date|date:"Y-m-d" }}';
-
-                            // To prevent a reload loop on initial page load, only redirect if the
-                            // calendar's date is different from the date in the URL.
                             if (newDateStr !== currentUrlDate) {
                                 window.location.href = `?view_type=day&date=${newDateStr}`;
                             }
+                        },
+                        eventClick: function(info) {
+                            const event = info.event;
+                            const props = event.extendedProps;
+
+                            // Populate Modal
+                            document.getElementById('modal-customer-name').textContent = props.customer_name;
+                            document.getElementById('modal-address').textContent = props.address;
+                            document.getElementById('modal-description').textContent = props.description;
+
+                            const statusBadge = document.getElementById('modal-status');
+                            statusBadge.textContent = props.status_display;
+                            statusBadge.className = 'badge'; // Reset classes
+                            if (props.status === 'scheduled') statusBadge.classList.add('bg-primary');
+                            else if (props.status === 'in_progress') statusBadge.classList.add('bg-info');
+                            else if (props.status === 'completed') statusBadge.classList.add('bg-secondary');
+                            else if (props.status === 'cancelled') statusBadge.classList.add('bg-danger');
+
+                            // Populate Logs
+                            const logsList = document.getElementById('modal-logs');
+                            logsList.innerHTML = ''; // Clear previous logs
+                            if (props.logs && props.logs.length > 0) {
+                                props.logs.forEach(function(log) {
+                                    const li = document.createElement('li');
+                                    li.className = 'list-group-item';
+                                    li.innerHTML = `<strong>${log.author}</strong> <small class="text-muted">(${log.timestamp})</small><br>${log.note}`;
+                                    logsList.appendChild(li);
+                                });
+                            } else {
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item text-muted';
+                                li.textContent = 'No log entries for this job.';
+                                logsList.appendChild(li);
+                            }
+
+                            // Populate Footer with buttons
+                            const modalFooter = document.getElementById('modal-footer');
+                            modalFooter.innerHTML = ''; // Clear previous buttons
+                            if (props.status === 'scheduled') {
+                                modalFooter.innerHTML += `<button type="button" class="btn btn-success" data-job-id="${props.job_id}" data-new-status="in_progress">Check In</button>`;
+                            } else if (props.status === 'in_progress') {
+                                modalFooter.innerHTML += `<button type="button" class="btn btn-warning" data-job-id="${props.job_id}" data-new-status="completed">Check Out</button>`;
+                            }
+                            modalFooter.innerHTML += '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>';
+
+                            // Show Modal
+                            const jobDetailsModal = new bootstrap.Modal(document.getElementById('jobDetailsModal'));
+                            jobDetailsModal.show();
                         }
                     });
                     calendar.render();
+
+                    // Add event listener for our custom modal buttons
+                    document.getElementById('jobDetailsModal').addEventListener('click', function(e) {
+                        const button = e.target.closest('button[data-new-status]');
+                        if (button) {
+                            const jobId = button.dataset.jobId;
+                            const newStatus = button.dataset.newStatus;
+                            const url = `/job/update/${jobId}/`;
+                            const csrfToken = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+
+                            fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: `status=${newStatus}`
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    // Easiest way to reflect all changes (e.g. new recurring job) is to just reload.
+                                    window.location.reload();
+                                } else {
+                                    alert('There was an error updating the job status.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                alert('An error occurred while updating the status.');
+                            });
+                        }
+                    });
                 }
             });
         </script>
