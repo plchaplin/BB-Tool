@@ -99,3 +99,16 @@ class StaffProfile(models.Model):
 
     def __str__(self):
         return self.user.username
+
+
+class JobLog(models.Model):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='logs')
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='job_logs')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    note = models.TextField()
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"Log on {self.job} by {self.author or 'Unknown'} at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"

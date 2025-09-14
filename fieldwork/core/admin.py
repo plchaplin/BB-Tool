@@ -2,7 +2,7 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import Customer, Job, StaffProfile
+from .models import Customer, Job, StaffProfile, JobLog
 from .widgets import TimeSelectWidget
 
 # Define an inline admin descriptor for StaffProfile model
@@ -80,11 +80,20 @@ class JobAdminForm(forms.ModelForm):
                 "Select a customer to have their defaults applied to this job upon saving."
             )
 
+class JobLogInline(admin.TabularInline):
+    model = JobLog
+    extra = 1
+    fields = ('timestamp', 'author', 'note')
+    readonly_fields = ('timestamp', 'author')
+    can_delete = False
+
+
 class JobAdmin(admin.ModelAdmin):
     form = JobAdminForm
     list_display = ('customer', 'job_type', 'date', 'start_time', 'end_time', 'status', 'recurrence_type', 'recurrence_frequency')
     list_filter = ('status', 'job_type', 'recurrence_type', 'date')
     search_fields = ('customer__name', 'description')
+    inlines = [JobLogInline]
 
     class Media:
         js = ("core/js/job_admin.js",)
@@ -107,6 +116,14 @@ class JobAdmin(admin.ModelAdmin):
                     obj.end_time = end_datetime.time()
 
         super().save_model(request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            if isinstance(instance, JobLog) and not instance.pk:
+                instance.author = request.user
+            instance.save()
+        formset.save_m2m()
 
 def get_duration_choices():
     """Generates a list of duration choices in 30-minute increments up to 8 hours."""
