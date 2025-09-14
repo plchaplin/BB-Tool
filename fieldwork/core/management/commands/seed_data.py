@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
 from faker import Faker
-from core.models import Customer, Job
+from core.models import Customer, Job, StaffProfile
 
 class Command(BaseCommand):
     help = 'Seeds the database with sample data'
@@ -36,18 +36,37 @@ class Command(BaseCommand):
             user.set_password('password')
             user.last_login = timezone.now()
             user.save()
+
+            # Create a profile for the staff user
+            StaffProfile.objects.create(
+                user=user,
+                street=fake.street_address(),
+                town=fake.city(),
+                postcode=fake.postcode(),
+                phone_number=fake.phone_number(),
+                contracted_hours_per_day=random.choice([4, 6, 8])
+            )
             staff_users.append(user)
 
         # Create customers
         customers = []
         for _ in range(20):
+            # Some customers have weekly or monthly defaults
+            recurrence_type = random.choice(['none', 'none', 'none', 'weekly', 'monthly'])
+            recurrence_frequency = 1
+            if recurrence_type == 'weekly':
+                recurrence_frequency = random.randint(1, 4)
+
             customer = Customer.objects.create(
                 name=fake.company(),
                 street=fake.street_address(),
                 town=fake.city(),
                 postcode=fake.postcode(),
                 phone_number=fake.phone_number(),
-                email=fake.email()
+                email=fake.email(),
+                default_duration_minutes=random.choice([60, 90, 120, 180, 240]),
+                default_recurrence_type=recurrence_type,
+                default_recurrence_frequency=recurrence_frequency
             )
             customers.append(customer)
 
@@ -62,8 +81,12 @@ class Command(BaseCommand):
                 start_minute = random.choice([0, 15, 30, 45])
                 start_time_obj = time(start_hour, start_minute)
 
-                # Duration in 15-minute increments, from 1 to 4 hours
-                duration_in_minutes = random.randint(4, 16) * 15
+                # 50% chance to use customer's default duration, otherwise random
+                if random.random() < 0.5:
+                    duration_in_minutes = customer.default_duration_minutes
+                else:
+                    duration_in_minutes = random.randint(4, 16) * 15
+
                 start_datetime = datetime.combine(job_date, start_time_obj)
                 end_datetime = start_datetime + timedelta(minutes=duration_in_minutes)
 
@@ -73,10 +96,9 @@ class Command(BaseCommand):
 
                 end_time_obj = end_datetime.time()
 
-                recurrence_type = random.choice(['none', 'weekly', 'monthly'])
-            recurrence_frequency = 1
-            if recurrence_type == 'weekly':
-                recurrence_frequency = random.randint(1, 4)
+                # Use customer's default recurrence settings
+                recurrence_type = customer.default_recurrence_type
+                recurrence_frequency = customer.default_recurrence_frequency
 
             job = Job.objects.create(
                 customer=customer,
