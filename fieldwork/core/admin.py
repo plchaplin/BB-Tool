@@ -15,9 +15,24 @@ class StaffProfileInline(admin.StackedInline):
               ('hours_monday', 'hours_tuesday', 'hours_wednesday', 'hours_thursday',
                'hours_friday', 'hours_saturday', 'hours_sunday'))
 
+from django.utils.translation import gettext_lazy as _
+
+
 # Define a new User admin
 class UserAdmin(BaseUserAdmin):
     inlines = (StaffProfileInline,)
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
+        (_('Permissions'), {
+            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'classes': ('collapse',),
+        }),
+        (_('Important dates'), {
+            'fields': ('last_login', 'date_joined'),
+            'classes': ('collapse',),
+        }),
+    )
 
 # Re-register UserAdmin
 admin.site.unregister(User)
