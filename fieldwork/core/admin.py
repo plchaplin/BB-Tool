@@ -90,13 +90,17 @@ class JobLogInline(admin.TabularInline):
 
 class JobAdmin(admin.ModelAdmin):
     form = JobAdminForm
-    list_display = ('customer', 'job_type', 'date', 'start_time', 'end_time', 'status', 'recurrence_type', 'recurrence_frequency')
-    list_filter = ('status', 'job_type', 'recurrence_type', 'date')
+    list_display = ('customer', 'job_type', 'date', 'start_time', 'end_time', 'get_assigned_staff', 'status')
+    list_filter = ('status', 'job_type', 'date', 'customer', 'staff')
     search_fields = ('customer__name', 'description')
     inlines = [JobLogInline]
 
     class Media:
         js = ("core/js/job_admin.js",)
+
+    def get_assigned_staff(self, obj):
+        return ", ".join([s.get_full_name() or s.username for s in obj.staff.all()])
+    get_assigned_staff.short_description = 'Assigned Staff'
 
     def save_model(self, request, obj, form, change):
         # If creating a new job, apply customer defaults for fields the user hasn't touched.
