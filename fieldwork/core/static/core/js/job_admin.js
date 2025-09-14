@@ -1,78 +1,72 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("[Job Admin] DOMContentLoaded: Script starting.");
-
     const customerSelect = document.getElementById('id_customer');
-    const startTimeSelect = document.getElementById('id_start_time');
-    const endTimeSelect = document.getElementById('id_end_time');
+    const durationSelect = document.getElementById('id_duration');
 
-    if (!customerSelect || !startTimeSelect || !endTimeSelect) {
-        console.error("[Job Admin] Error: One or more required form elements not found. Exiting.");
-        return;
+    if (!customerSelect || !durationSelect) {
+        return; // Exit if elements aren't on the page
     }
-    console.log("[Job Admin] All form elements found successfully.");
+
+    // Create a span for the indicator message and add it after the dropdown
+    const indicator = document.createElement('span');
+    indicator.className = 'ms-2 fst-italic'; // Bootstrap margin and italic style
+    durationSelect.parentElement.appendChild(indicator);
 
     let customerDurations = {};
     try {
-        const durationsData = customerSelect.dataset.durations;
-        console.log("[Job Admin] Raw data-durations attribute:", durationsData);
-        if (!durationsData) {
-            throw new Error("data-durations attribute is empty or missing.");
-        }
-        customerDurations = JSON.parse(durationsData);
-        console.log("[Job Admin] Parsed customer durations:", customerDurations);
+        customerDurations = JSON.parse(customerSelect.dataset.durations);
     } catch (e) {
-        console.error("[Job Admin] Error parsing customer durations data:", e);
+        console.error("Could not parse customer durations data.", e);
         return;
     }
 
-    function updateEndTime() {
-        console.log("[Job Admin] updateEndTime() called.");
-
+    function updateDurationIndicator() {
         const customerId = customerSelect.value;
-        const duration = customerDurations[customerId];
-        const startTime = startTimeSelect.value;
-
-        console.log(`[Job Admin] Current values: customerId='${customerId}', duration='${duration}', startTime='${startTime}'`);
-
-        if (!customerId || !duration || !startTime) {
-            console.log("[Job Admin] Not enough info to calculate end time. Aborting update.");
+        if (!customerId) {
+            indicator.textContent = '';
             return;
         }
 
-        console.log("[Job Admin] Calculating new end time...");
-        const timeParts = startTime.split(':');
-        const hours = parseInt(timeParts[0], 10);
-        const minutes = parseInt(timeParts[1], 10);
+        const defaultDuration = customerDurations[customerId];
+        const selectedDuration = parseInt(durationSelect.value, 10);
 
-        const date = new Date(2000, 0, 1, hours, minutes);
-        date.setMinutes(date.getMinutes() + duration);
-
-        const endHours = String(date.getHours()).padStart(2, '0');
-        const endMinutes = String(date.getMinutes()).padStart(2, '0');
-
-        const newEndTimeValue = `${endHours}:${endMinutes}:00`;
-        console.log(`[Job Admin] Calculated newEndTimeValue: '${newEndTimeValue}'`);
-
-        let optionFound = false;
-        for (let i = 0; i < endTimeSelect.options.length; i++) {
-            if (endTimeSelect.options[i].value === newEndTimeValue) {
-                endTimeSelect.options[i].selected = true;
-                optionFound = true;
-                console.log(`[Job Admin] Found and selected matching option in end_time dropdown.`);
-                break;
-            }
+        if (!defaultDuration) {
+            indicator.textContent = '';
+            return;
         }
 
-        if (!optionFound) {
-            console.warn(`[Job Admin] Warning: Could not find an option with value '${newEndTimeValue}' in the end_time dropdown.`);
+        if (selectedDuration === defaultDuration) {
+            indicator.textContent = '(Matches customer default)';
+            indicator.className = 'ms-2 fst-italic text-muted';
+        } else {
+            const difference = selectedDuration - defaultDuration;
+            if (difference > 0) {
+                indicator.textContent = `(${difference} minutes above default)`;
+                indicator.className = 'ms-2 fst-italic text-warning';
+            } else {
+                indicator.textContent = `(${Math.abs(difference)} minutes below default)`;
+                indicator.className = 'ms-2 fst-italic text-warning';
+            }
         }
     }
 
-    console.log("[Job Admin] Attaching event listeners...");
-    customerSelect.addEventListener('change', updateEndTime);
-    startTimeSelect.addEventListener('change', updateEndTime);
+    function handleCustomerChange() {
+        // When a customer is selected, set the duration to their default.
+        // This is primarily for the "Add Job" screen.
+        const customerId = customerSelect.value;
+        if (customerId) {
+            const defaultDuration = customerDurations[customerId];
+            if (defaultDuration) {
+                durationSelect.value = defaultDuration;
+            }
+        }
+        // Always update the indicator text after a customer change.
+        updateDurationIndicator();
+    }
 
-    console.log("[Job Admin] Performing initial call to updateEndTime()...");
-    updateEndTime();
-    console.log("[Job Admin] Script initialization complete.");
+    // Attach event listeners
+    customerSelect.addEventListener('change', handleCustomerChange);
+    durationSelect.addEventListener('change', updateDurationIndicator);
+
+    // Initial call to set the indicator state correctly on page load (for existing jobs)
+    updateDurationIndicator();
 });
