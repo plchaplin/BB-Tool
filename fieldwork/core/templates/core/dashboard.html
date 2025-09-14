@@ -11,6 +11,7 @@
             <form method="GET" action="{% url 'dashboard' %}" class="d-flex justify-content-end align-items-center">
                 <input type="hidden" name="view_type" value="{{ view_type }}">
 
+                {% if user.is_superuser %}
                 <select name="staff_id" class="form-select me-2" style="width: auto;" onchange="this.form.submit()">
                     <option value="all" {% if selected_staff_id == 'all' %}selected{% endif %}>All Staff</option>
                     {% for staff in staff_list %}
@@ -19,6 +20,7 @@
                         </option>
                     {% endfor %}
                 </select>
+                {% endif %}
 
                 <input type="date" id="date" name="date" class="form-control me-2" style="width: auto;" value="{{ selected_date|date:'Y-m-d' }}">
                 <button type="submit" class="btn btn-primary">Load</button>

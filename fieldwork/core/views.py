@@ -14,10 +14,12 @@ from django.contrib.auth.models import User
 
 
 from collections import defaultdict
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from .models import Customer, Job
 
 
+@login_required
 def dashboard(request):
     view_type = request.GET.get('view_type', 'day')
     selected_date_str = request.GET.get('date', date.today().isoformat())
@@ -31,13 +33,19 @@ def dashboard(request):
     # Base queryset for jobs
     jobs = Job.objects.prefetch_related('staff', 'customer').all()
 
-    # Filter by staff member if one is selected
-    if selected_staff_id and selected_staff_id != 'all':
-        try:
-            staff_id = int(selected_staff_id)
-            jobs = jobs.filter(staff__id=staff_id)
-        except (ValueError, TypeError):
-            pass
+    # Filter jobs based on user type
+    if request.user.is_superuser:
+        # Superusers can filter by any staff member from the dropdown
+        if selected_staff_id and selected_staff_id != 'all':
+            try:
+                jobs = jobs.filter(staff__id=int(selected_staff_id))
+            except (ValueError, TypeError):
+                pass # Invalid staff_id, show all
+    else:
+        # Regular staff only see their own jobs
+        jobs = jobs.filter(staff=request.user)
+        # Set this so the context is aware of the filtered user
+        selected_staff_id = str(request.user.id)
 
     # Filter by date range based on the view type
     if view_type == 'week':
@@ -143,6 +151,7 @@ def dashboard(request):
     }
     return render(request, 'core/dashboard.html', context)
 
+@login_required
 @require_POST
 def update_job_status(request, job_id):
     job = get_object_or_404(Job, id=job_id)
