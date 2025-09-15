@@ -5,6 +5,7 @@ class Command(BaseCommand):
     help = 'Lists all users who have a StaffProfile associated with them.'
 
     def handle(self, *args, **options):
+        self.stdout.write(self.style.SUCCESS("Attempting to run list_staff command..."))
         self.stdout.write(self.style.SUCCESS("--- Checking for users with a Staff Profile ---"))
 
         staff_users = User.objects.filter(staffprofile__isnull=False).order_by('username')
